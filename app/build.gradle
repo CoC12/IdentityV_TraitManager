@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "dev.coc12.identityvtraitmanager"
-        minSdkVersion 21
+        minSdkVersion 23
         targetSdkVersion 29
         versionCode 1
         versionName "1.0"
