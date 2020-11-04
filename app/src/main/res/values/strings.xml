@@ -3,4 +3,10 @@
 
     <string name="startService">表示する</string>
     <string name="runningService">サービスが実行中</string>
+
+    <string name="defaultDescription">default description</string>
+    <string name="startCountIconDescription">start count</string>
+    <string name="excitementIconDescription">excitement icon</string>
+    <string name="blinkIconDescription">blink icon</string>
+    <string name="teleportIconDescription">teleport icon</string>
 </resources>
