@@ -9,19 +9,26 @@ import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.LinearLayout;
 
 import androidx.annotation.RequiresApi;
+import androidx.core.content.ContextCompat;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ManageTraitService extends Service {
 
     public static boolean isActive = false;
     private Context context;
-    private View traitView;
+    private LinearLayout serviceLinearLayout;
     private WindowManager windowManager;
+    private final List<CountdownCoolTime> countdownCoolTimes = new ArrayList<>();
 
     public ManageTraitService() {
     }
@@ -60,7 +67,9 @@ public class ManageTraitService extends Service {
     }
 
     private void buildView() {
-        final ViewGroup nullParent = null;
+        final int[] iconDrawables = Constants.TRAIT_ICONS;
+        final int[] openingTimes = Constants.TRAIT_OPENING_TIMES;
+        final int[] coolTimes = Constants.TRAIT_COOL_TIMES;
         int typeLayer;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             typeLayer = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
@@ -68,25 +77,54 @@ public class ManageTraitService extends Service {
             typeLayer = WindowManager.LayoutParams.TYPE_PHONE;
         }
 
-        LayoutInflater layoutInflater = LayoutInflater.from(context);
-        traitView = layoutInflater.inflate(R.layout.service_manage_trait, nullParent);
-        traitView.setOnClickListener(view -> stopSelf());
+        serviceLinearLayout = new LinearLayout(context);
+        serviceLinearLayout.setOrientation(LinearLayout.HORIZONTAL);
+
+        View startIcon = buildIconView(R.drawable.ic_start_count, 0, 0);
+        startIcon.setOnClickListener(view -> startAllCountdown(countdownCoolTimes));
+        serviceLinearLayout.addView(startIcon);
+        for (int i = 0; i < iconDrawables.length; i++) {
+            serviceLinearLayout.addView(buildIconView(iconDrawables[i], openingTimes[i], coolTimes[i]));
+        }
+        View closeIcon = buildIconView(R.drawable.ic_close_service, 0, 0);
+        closeIcon.setOnClickListener(view -> stopSelf());
+        serviceLinearLayout.addView(closeIcon);
 
         windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 typeLayer,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT);
-        windowManager.addView(traitView, params);
+        params.gravity=  Gravity.TOP | Gravity.START;
+        windowManager.addView(serviceLinearLayout, params);
+    }
+
+    private View buildIconView(int traitIcon, int openingTime, int coolTime) {
+        final ViewGroup nullParent = null;
+
+        LayoutInflater layoutInflater = LayoutInflater.from(context);
+        View iconView = layoutInflater.inflate(R.layout.service_manage_trait, nullParent);
+        iconView.findViewById(R.id.icon)
+                .setBackground(ContextCompat.getDrawable(context, traitIcon));
+        CountdownCoolTime countdownCoolTime = new CountdownCoolTime(openingTime, iconView.findViewById(R.id.countdownText));
+        countdownCoolTimes.add(countdownCoolTime);
+        iconView.setOnClickListener(view -> countdownCoolTime.startCountdown(coolTime));
+        return iconView;
+    }
+
+    private void startAllCountdown(List<CountdownCoolTime> countdownCoolTimes) {
+        for (CountdownCoolTime countdownCoolTime : countdownCoolTimes) {
+            countdownCoolTime.startOpeningCountdown();
+        }
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        windowManager.removeView(traitView);
+        windowManager.removeView(serviceLinearLayout);
         isActive = false;
         Intent broadcastIntent = new Intent();
         broadcastIntent.setAction(Constants.SERVICE_STOPPED_ACTION);
